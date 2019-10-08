@@ -15,14 +15,16 @@ const state = {
   notes: [],
   languageSelected: 'all',
   gistsSelected: false,
+  gistsLoaded: false,
   isLoading: false,
 };
 
 const mutations = {
   LOAD_NOTES(state, notes) {
+    // if (!state.gistsLoaded) {
     state.languageSelected = 'all';
-
     state.notes = notes;
+    // }
   },
   ADD_NOTE(state, note) {
     state.notes.push(note);
@@ -50,32 +52,43 @@ const actions = {
   loadNotes(store) {
     if (store.state.gistsSelected) {
       if (store.rootState.Settings.settings.githubPersonalAccessToken) {
-        store.commit('SELECT_LOADING', true);
-        store.commit('LOAD_NOTES', []);
+        if (state.gistsLoaded) {
+          const obj = JSON.parse(localStorage.getItem('notes'));
+          store.commit('SELECT_LOADING', false);
+          store.commit('LOAD_NOTES', obj);
+        } else {
+          store.commit('SELECT_LOADING', true);
+          store.commit('LOAD_NOTES', []);
+        }
 
-        octokit.authenticate({
-          type: 'token',
-          token: store.rootState.Settings.settings.githubPersonalAccessToken,
-        });
-
-        octokit.gists.getAll().then((res) => {
-          const promises = [];
-
-          res.data.forEach((gist) => {
-            promises.push(octokit.gists.get({ id: gist.id }));
+        if (!state.gistsLoaded) {
+          octokit.authenticate({
+            type: 'token',
+            token: store.rootState.Settings.settings.githubPersonalAccessToken,
           });
+          octokit.gists.getAll().then((res) => {
+            const promises = [];
 
-          Promise.all(promises).then((values) => {
-            const notes = [];
-
-            values.forEach((gistDetailed) => {
-              notes.push(converter.gistToNote(gistDetailed.data));
+            res.data.forEach((gist) => {
+              promises.push(octokit.gists.get({ id: gist.id }));
             });
 
-            store.commit('LOAD_NOTES', notes);
-            store.commit('SELECT_LOADING', false);
+            Promise.all(promises).then((values) => {
+              const notes = [];
+
+              values.forEach((gistDetailed) => {
+                notes.push(converter.gistToNote(gistDetailed.data));
+              });
+
+              store.commit('LOAD_NOTES', notes);
+              store.commit('SELECT_LOADING', false);
+              localStorage.setItem('notes', JSON.stringify(notes));
+              state.gistsLoaded = true;
+              // let obj = JSON.parse(localStorage.getItem('notes'));
+              // console.log(obj)
+            });
           });
-        });
+        }
       } else {
         store.commit('LOAD_NOTES', []);
       }
