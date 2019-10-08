@@ -183,7 +183,7 @@ const actions = {
   },
   selectGists(store, gists) {
     store.commit('SELECT_GISTS', gists);
-    store.cache.dispatch('loadNotes');
+    store.dispatch('loadNotes');
   },
 };
 

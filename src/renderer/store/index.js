@@ -7,6 +7,8 @@ import modules from './modules';
 Vue.use(Vuex);
 
 export default new Vuex.Store({
-  plugins: [createCache()],
+  plugins: [
+    createCache()
+  ],
   modules,
 });
